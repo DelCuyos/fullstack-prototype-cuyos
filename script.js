@@ -36,7 +36,7 @@ function handleRouting() {
     if (hash === "#/departments") renderDepartmentsTable();
     if (hash === "#/employees") renderEmployeesTable();
 
-    
+
 
     // Map hash routes to page IDs
     const routes = {
@@ -88,7 +88,7 @@ function handleRouting() {
     }
 }
 
-
+    
 // ===============================
 // EVENT LISTENERS
 // ===============================
