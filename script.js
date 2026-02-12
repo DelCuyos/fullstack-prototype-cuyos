@@ -20,7 +20,7 @@ function navigateTo(hash) {
 // ROUTING LOGIC
 // ===============================
 function handleRouting() {
-    let hash = window.location.hash;
+    const hash = window.location.hash;
 
     // Default route
     if (hash === "#/profile") {
@@ -34,8 +34,13 @@ function handleRouting() {
 
     if (hash === "#/accounts") renderAccountsList();
     if (hash === "#/departments") renderDepartmentsTable();
-    if (hash === "#/employees") renderEmployeesTable();
+    if (hash === "#/admin-requests") renderAdminRequestsTable();
 
+
+    if (currentUser && !currentUser.verified && route !== "verify") {
+    navigateTo('#/verify');
+    return;
+    }
 
 
     // Map hash routes to page IDs
@@ -62,8 +67,9 @@ function handleRouting() {
 
     // Block unauthenticated users
     if (protectedRoutes.includes(hash) && !currentUser) {
-        navigateTo("#/login");
-        return;
+    showToast("Please login to access this page", "warning"); // Added feedback
+    navigateTo("#/login");
+    return;
     }
 
     // Block non-admin users
@@ -134,7 +140,7 @@ document.getElementById("registerForm").addEventListener("submit", function (e) 
         email,
         password,
         verified: false,
-        role: "user"
+        role: "User"
     });
 
     saveToStorage(); 
@@ -149,7 +155,7 @@ document.getElementById("verifyBtn").addEventListener("click", function () {
     const account = db.accounts.find(acc => acc.email === email);
 
     if (account) {
-        account.verified = true;
+        account.verified = false;
         saveToStorage();
         localStorage.removeItem("unverified_email");
         navigateTo("#/login");
@@ -195,18 +201,33 @@ document.getElementById("loginForm").addEventListener("submit", function (e) {
 
 
 function setAuthState(isAuth, user = null) {
-    if (isAuth) {
+    const userDisplay = document.querySelector("#userDropdown");
+
+    if (isAuth && user) {   
         currentUser = user;
+
+        if (userDisplay) {
+            userDisplay.textContent = user.firstName;
+        }
+
         document.body.classList.remove("not-authenticated");
         document.body.classList.add("authenticated");
 
         if (user.role === "admin") {
             document.body.classList.add("is-admin");
+        } else {
+            document.body.classList.remove("is-admin");
         }
+
     } else {
         currentUser = null;
+
         document.body.classList.remove("authenticated", "is-admin");
         document.body.classList.add("not-authenticated");
+
+        if (userDisplay) {
+            userDisplay.textContent = "Username";
+        }
     }
 }
 
@@ -252,13 +273,22 @@ function loadFromStorage() {
                 }
             ],
             departments: [
-                { id: 1, name: "Engineering" },
+                { id: 1, name: "IT" },
                 { id: 2, name: "HR" }
             ]
         };
 
         saveToStorage();
     }
+    const token = localStorage.getItem("auth_token");
+    if (token) {
+    const user = db.accounts.find(a => a.email === token);
+    if (user) {
+        setAuthState(true, user);
+    }
+}
+
+
 }
 
 
@@ -278,18 +308,18 @@ function renderProfile() {
         return;
     }
 
+    // Creates the boxed card layout seen in the image
     container.innerHTML = `
-        <ul class="list-group">
-            <li class="list-group-item">
-                <strong>Name:</strong> ${currentUser.firstName} ${currentUser.lastName}
-            </li>
-            <li class="list-group-item">
-                <strong>Email:</strong> ${currentUser.email}
-            </li>
-            <li class="list-group-item">
-                <strong>Role:</strong> ${currentUser.role}
-            </li>
-        </ul>
+        <div class="card shadow-sm mt-3" style="max-width: 600px;">
+            <div class="card-body p-4">
+                <h4 class="card-title fw-bold mb-3">${currentUser.firstName} ${currentUser.lastName}</h4>
+                <p class="mb-1"><strong>Email:</strong> ${currentUser.email}</p>
+                <p class="mb-4"><strong>Role:</strong> ${currentUser.role}</p>
+                <button class="btn btn-outline-primary px-4" onclick="alert('Edit coming soon!')">
+                    Edit Profile
+                </button>
+            </div>
+        </div>
     `;
 }
 
@@ -299,42 +329,34 @@ document.getElementById("editProfileBtn").addEventListener("click", () => {
 });
 
 
-function renderAccountsList() {
-    const container = document.getElementById("accountsTable");
+function renderAccounts() {
+    const tbody = document.getElementById("accountsTable");
+    tbody.innerHTML = "";
 
-    let html = `
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Verified</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
-
-    db.accounts.forEach(acc => {
-        html += `
+    users.forEach(user => {
+        tbody.innerHTML += `
             <tr>
-                <td>${acc.firstName} ${acc.lastName}</td>
-                <td>${acc.email}</td>
-                <td>${acc.role}</td>
-                <td>${acc.verified ? "✔" : "—"}</td>
+                <td>${user.firstName}</td>
+                <td>${user.email}</td>
                 <td>
-                    <button class="btn btn-sm btn-warning" onclick="editAccount('${acc.email}')">Edit</button>
-                    <button class="btn btn-sm btn-info" onclick="resetPassword('${acc.email}')">Reset PW</button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteAccount('${acc.email}')">Delete</button>
+                    <select onchange="changeRole('${user.email}', this.value)" 
+                        class="form-select">
+                        <option value="user" ${user.role==='user'?'selected':''}>User</option>
+                        <option value="admin" ${user.role==='admin'?'selected':''}>Admin</option>
+                    </select>
+                </td>
+                <td>${user.verified ? 'Verified' : 'Pending'}</td>
+                <td>
+                    <button class="btn btn-danger btn-sm"
+                        onclick="deleteUser('${user.email}')">
+                        Delete
+                    </button>
                 </td>
             </tr>
         `;
     });
-
-    html += "</tbody></table>";
-    container.innerHTML = html;
 }
+
 function editAccount(email) {
     const acc = db.accounts.find(a => a.email === email);
     if (!acc) return;
@@ -370,75 +392,62 @@ function deleteAccount(email) {
 }
 
 
-function renderDepartmentsTable() {
-    const container = document.getElementById("departmentsTable");
+function renderDepartments() {
+    const tbody = document.getElementById("departmentsTable");
+    tbody.innerHTML = "";
 
-    let html = `
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Description</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
-
-    db.departments.forEach(d => {
-        html += `
+    departments.forEach(dep => {
+        tbody.innerHTML += `
             <tr>
-                <td>${d.name}</td>
-                <td>${d.description || ""}</td>
+                <td>${dep.id}</td>
+                <td contenteditable="true" 
+                    onblur="updateDepartment(${dep.id}, this.innerText)">
+                    ${dep.name}
+                </td>
+                <td>
+                    <button class="btn btn-danger btn-sm"
+                        onclick="deleteDepartment(${dep.id})">
+                        Delete
+                    </button>
+                </td>
             </tr>
         `;
     });
-
-    html += "</tbody></table>";
-    container.innerHTML = html;
-}
+};
 
 
 document.getElementById("addDeptBtn").addEventListener("click", () => {
-    alert("Not implemented");
+    const name = prompt("Department Name:");
+    const description = prompt("Description:");
+    if (name) {
+        db.departments.push({ id: Date.now(), name, description });
+        saveToStorage();
+        renderDepartmentsTable();
+    }
 });
 
 
-function renderEmployeesTable() {
+function renderEmployeesTable() {   
     const container = document.getElementById("employeesTable");
-
-    let html = `
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>User</th>
-                    <th>Position</th>
-                    <th>Department</th>
-                    <th>Hire Date</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
-
-    db.employees.forEach(emp => {
-        const user = db.accounts.find(a => a.email === emp.userEmail);
-        const dept = db.departments.find(d => d.id === emp.deptId);
-
-        html += `
-            <tr>
-                <td>${emp.id}</td>
-                <td>${user ? user.email : "N/A"}</td>
-                <td>${emp.position}</td>
-                <td>${dept ? dept.name : "N/A"}</td>
-                <td>${emp.hireDate}</td>
-            </tr>
+    
+    // Display "No employees" if empty, as per your screenshot
+    if (db.employees.length === 0) {
+        container.innerHTML = `
+            <table class="table table-bordered">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th><th>Name</th><th>Position</th><th>Dept</th><th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="5" class="text-center bg-light">No employees.</td></tr>
+                </tbody>
+            </table>
         `;
-    });
-
-    html += "</tbody></table>";
-    container.innerHTML = html;
+    } else {
+        // ... standard employee rendering logic ...
+    }
 }
-
 
 
 document.getElementById("addEmployeeBtn").addEventListener("click", () => {
@@ -481,23 +490,23 @@ document.getElementById("newRequestBtn").addEventListener("click", () => {
 document.getElementById("addItemBtn").addEventListener("click", addItemRow);
 
 function addItemRow() {
-    const div = document.createElement("div");
-    div.className = "row mb-2";
-
-    div.innerHTML = `
-        <div class="col">
-            <input class="form-control item-name" placeholder="Item name">
+    const container = document.getElementById("itemsContainer");
+    const row = document.createElement("div");
+    row.className = "row g-2 mb-2 item-row";
+    row.innerHTML = `
+        <div class="col-7">
+            <input type="text" class="form-control item-name" placeholder="Item name">
         </div>
         <div class="col-3">
-            <input type="number" class="form-control item-qty" placeholder="Qty" min="1">
+            <input type="number" class="form-control item-qty" value="1" min="1">
         </div>
-        <div class="col-1">
-            <button class="btn btn-danger btn-sm remove-item">×</button>
+        <div class="col-2 text-end">
+            <button class="btn btn-outline-danger btn-sm" onclick="this.parentElement.parentElement.remove()">
+                <i class="bi bi-x"></i> &times;
+            </button>
         </div>
     `;
-
-    div.querySelector(".remove-item").onclick = () => div.remove();
-    document.getElementById("itemsContainer").appendChild(div);
+    container.appendChild(row);
 }
 
 
@@ -599,11 +608,84 @@ function showToast(message, type = "info") {
 
     const toast = new bootstrap.Toast(toastEl);
     toast.show();
+};
+
+
+
+
+function renderVerifyEmail() {
+    const container = document.getElementById("verify-email-page");
+    container.innerHTML = `
+        <div class="container mt-5">
+            <h2>Verify Your Email</h2>
+            <div class="alert alert-success d-flex align-items-center" role="alert">
+                <span class="me-2">✅</span> A verification link has been sent to your email.
+            </div>
+            <p class="text-muted">For demo purposes, click below to simulate verification:</p>
+            <div class="d-flex gap-2">
+                <button class="btn btn-success" onclick="simulateVerification()">
+                    ✅ Simulate Email Verification
+                </button>
+                <a href="#/login" class="btn btn-outline-secondary">Go to Login</a>
+            </div>
+        </div>
+    `;
 }
 
-showToast("Registration successful! Please verify email.", "success");
-showToast("Invalid credentials", "danger");
-showToast("Request submitted", "success");
-showToast("Access denied", "warning");
+// Simulated verification logic
+function simulateVerification() {
+    // In a real app, this updates the database via API
+    showToast("Email verified! You may now log in.", "success");
+    // Redirect to login after successful "verification"
+    window.location.hash = "#/login";
+}
+
+function verifyEmail() {
+    currentUser.verified = true;
+    saveUsers();
+    alert("Email verified successfully!");
+    navigateTo('#/profile');
+}
+
+function addRequestRow() {
+    const tbody = document.getElementById("requestItems");
+
+    tbody.innerHTML += `
+        <tr>
+            <td><input type="text" class="form-control"></td>
+            <td><input type="number" class="form-control"></td>
+            <td>
+                <button class="btn btn-danger btn-sm"
+                    onclick="this.closest('tr').remove()">
+                    X
+                </button>
+            </td>
+        </tr>
+    `;
+}
 
 
+function submitRequest() {
+    const rows = document.querySelectorAll("#requestItems tr");
+    let items = [];
+
+    rows.forEach(row => {
+        const inputs = row.querySelectorAll("input");
+        items.push({
+            item: inputs[0].value,
+            qty: inputs[1].value
+        });
+    });
+
+    requests.push({
+        id: Date.now(),
+        user: currentUser.email,
+        status: "Pending",
+        items
+    });
+
+    renderRequests();
+    bootstrap.Modal.getInstance(
+        document.getElementById('requestModal')
+    ).hide();
+}

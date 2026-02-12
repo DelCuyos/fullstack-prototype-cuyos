@@ -13,7 +13,9 @@
 
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="#">Full-Stack App</a>
+            <a class="navbar-brand" href="#">
+                Full-Stack App (Rodel B. Cuyos)
+            </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -37,14 +39,21 @@
                     </li>
 
                     <li class="nav-item dropdown role-logged-in">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            Username
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                        Username
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="#/profile">Profile</a></li>
-                            <li><a class="dropdown-item" href="#/requests">My Requests</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="#/logout">Logout</a></li>
+                    <ul class="dropdown-menu dropdown-menu-end shadow">
+                    <li><a class="dropdown-item" href="#/profile">Profile</a></li>
+        
+                        <li class="role-admin"><a class="dropdown-item" href="#/employees">Employees</a></li>
+                        <li class="role-admin"><a class="dropdown-item" href="#/accounts">Accounts</a></li>
+                        <li class="role-admin"><a class="dropdown-item" href="#/departments">Departments</a></li>
+                        
+                        <li><a class="dropdown-item" href="#/requests">My Requests</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="#/logout">Logout</a></li>
+                    </ul>
+                    </li>
                         </ul>
                     </li>
                 </ul>
@@ -52,21 +61,57 @@
         </div>
     </nav>
 
-    <main class="container mt-4">
+    <main class="container py-4">
         
         <section id="home-page" class="page active">
-            <h2>Home</h2>
-            <p>Welcome to the Full-Stack SPA Prototype.</p>
+            <div class="p-5 mb-4 bg-light rounded-3 shadow-sm">
+            <div class="container-fluid py-4">
+                <h1 class="display-5 fw-bold">Welcome to Full-Stack App</h1>
+                <p class="col-md-8 fs-5">
+                    A static prototype before backend integration. Simulates:
+                </p>
+
+                <ul>
+                    <li>Email registration + fake verification</li>
+                    <li>Login with JWT-like token simulation</li>
+                    <li>Role-based UI (Admin/User)</li>
+                    <li>CRUD for Employees, Departments, Requests</li>
+                </ul>
+
+            <div class="alert alert-info mt-3">
+                <strong>Note:</strong> All data is stored in 
+                <code>localStorage</code>. Refresh to reset.    
+            </div>
+
+                <button class="btn btn-primary btn-lg"
+                    onclick="navigateTo('#/login')">
+                Get Started →
+                </button>
+            </div>
+            </div>
         </section>
 
         <section id="register-page" class="page">
-            <h2>Register</h2>
+            <h2>Register Account</h2>
             <form id="registerForm" class="mt-3" style="max-width: 400px;">
+                
                 <div class="mb-2"><input type="text" class="form-control" placeholder="First Name" required></div>
+                
                 <div class="mb-2"><input type="text" class="form-control" placeholder="Last Name" required></div>
+                
                 <div class="mb-2"><input type="email" class="form-control" placeholder="Email" required></div>
+                
                 <div class="mb-2"><input type="password" class="form-control" placeholder="Password (min 6 chars)" required></div>
-                <button class="btn btn-primary">Register</button>
+                
+                <div class="d-flex gap-2">
+                    <button class="btn btn-success">
+                        Sign up
+                    <button type="button" 
+                        class="btn btn-outline-dark"
+                        onclick="navigateTo('#/')">
+                        Cancel
+                    </button>
+                </div>
                 <p id="registerError" class="text-danger mt-2"></p>
             </form>
         </section>
@@ -77,75 +122,158 @@
                 <div class="mb-2"><input type="email" class="form-control" placeholder="Email" required></div>
                 <div class="mb-2"><input type="password" class="form-control" placeholder="Password" required></div>
                 <button class="btn btn-success">Login</button>
+                <button type="button" 
+                        class="btn btn-outline-dark"
+                        onclick="navigateTo('#/')">
+                        Cancel
+                    </button>
                 <p id="loginError" class="text-danger mt-2"></p>
             </form>
         </section>
 
-        <section id="verify-page" class="page">
-            <h2>Email Verification</h2>
-            <p id="verifyMessage"></p>
-            <button id="verifyBtn" class="btn btn-success">Verify Now</button>
+        <section id="verify-page" class="page d-none">
+            <div class="card shadow-sm text-center">
+                <div class="card-header bg-warning">
+                    Email Verification
+                </div>
+                <div class="card-body">
+                    <p>Please verify your email before continuing.</p>
+                    <button class="btn btn-success" onclick="verifyEmail()">
+                        Verify Email
+                    </button>
+                </div>
+            </div>  
         </section>
 
-        <section id="profile-page" class="page">
-            <h2>My Profile</h2>
-            <div id="profileContent" class="mt-3"></div>
-            <button id="editProfileBtn" class="btn btn-secondary mt-3">Edit Profile</button>
+        <section id="profile-page" class="page d-none">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    Profile
+                </div>
+                <div class="card-body">
+                    <p><strong>Full Name:</strong> <span id="profileFullName"></span></p>
+                    <p><strong>Email:</strong> <span id="profileEmail"></span></p>
+                    <p><strong>Role:</strong> <span id="profileRole"></span></p>
+                    <p><strong>Status:</strong> <span id="profileStatus"></span></p>
+                </div>
+            </div>
         </section>
 
-        <section id="requests-page" class="page">
-            <h2>My Requests</h2>
-            <button class="btn btn-primary mb-3" id="newRequestBtn">+ New Request</button>
-            <div id="requestsTable"></div>
+
+        <section id="requests-page" class="page d-none">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white d-flex justify-content-between">
+                    <span>Requests</span>
+                    <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#requestModal">
+                        New Request
+                    </button>
+                </div>
+                <div class="card-body">
+                    <table class="table table-bordered">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>ID</th>
+                                <th>Requested By</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="requestsTable"></tbody>
+                    </table>
+                </div>
+            </div>
         </section>
 
-        <section id="employees-page" class="page role-admin">
-            <h2>Employees</h2>
-            <button class="btn btn-primary mb-3" id="addEmployeeBtn">+ Add Employee</button>
-            <div id="employeesTable"></div>
+
+
+        <section id="accounts-page" class="page d-none role-admin">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white">
+                    Account Management
+                </div>
+                <div class="card-body">
+                    <table class="table table-bordered">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="accountsTable"></tbody>
+                    </table>
+                </div>
+            </div>
         </section>
 
-        <section id="accounts-page" class="page role-admin">
-            <h2>Accounts</h2>
-            <button class="btn btn-primary mb-3" id="addAccountBtn">+ Add Account</button>
-            <div id="accountsTable"></div>
-        </section>
+        <section id="departments-page" class="page d-none role-admin">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    Department Management
+                </div>
+                <div class="card-body">
+                    <button class="btn btn-success mb-3" onclick="addDepartment()">
+                        Add Department
+                    </button>
 
-        <section id="departments-page" class="page role-admin">
-            <h2>Departments</h2>
-            <button class="btn btn-primary mb-3" id="addDeptBtn">+ Add Department</button>
-            <div id="departmentsTable"></div>
+                    <table class="table table-bordered">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>ID</th>
+                                <th>Department Name</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="departmentsTable"></tbody>
+                    </table>
+                </div>
+            </div>
         </section>
 
     </main>
 
-    <div class="modal fade" id="requestModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">New Request</h5>
-                    <button class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Request Type</label>
-                        <select id="requestType" class="form-select">
-                            <option value="Equipment">Equipment</option>
-                            <option value="Leave">Leave</option>
-                            <option value="Resources">Resources</option>
-                        </select>
-                    </div>
-                    <h6>Items</h6>
-                    <div id="itemsContainer"></div>
-                    <button class="btn btn-sm btn-outline-primary mt-2" id="addItemBtn">+ Add Item</button>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button class="btn btn-success" id="submitRequestBtn">Submit Request</button>
+            <div class="modal fade" id="requestModal">
+                <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+
+                        <div class="modal-header bg-dark text-white">
+                            <h5>New Request</h5>
+                            <button type="button" class="btn-close btn-close-white"
+                                data-bs-dismiss="modal"></button>
+                        </div>
+
+                        <div class="modal-body">
+
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Quantity</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="requestItems"></tbody>
+                            </table>
+
+                            <button class="btn btn-secondary"
+                                onclick="addRequestRow()">
+                                Add Row
+                            </button>
+
+                        </div>
+
+                        <div class="modal-footer">
+                            <button class="btn btn-success"
+                                onclick="submitRequest()">
+                                Submit Request
+                            </button>
+                        </div>
+
+                        </div>
                 </div>
             </div>
-        </div>
-    </div>
 
     <div class="toast-container position-fixed bottom-0 end-0 p-3">
         <div id="appToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
